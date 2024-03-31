@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lf-edge/ekuiper/internal/xsql"
 	"io"
 	"net/http"
 	"os"
@@ -414,7 +415,7 @@ func sourcesManageHandler(w http.ResponseWriter, r *http.Request, st ast.StreamT
 	switch r.Method {
 	case http.MethodGet:
 		var (
-			content []string
+			content []xsql.StreamInfo
 			err     error
 			kind    string
 		)
@@ -429,9 +430,9 @@ func sourcesManageHandler(w http.ResponseWriter, r *http.Request, st ast.StreamT
 			}
 		}
 		if kind != "" {
-			content, err = streamProcessor.ShowTable(kind)
+			content, err = streamProcessor.ShowTableInfo(kind)
 		} else {
-			content, err = streamProcessor.ShowStream(st)
+			content, err = streamProcessor.ShowStreamInfo(st)
 		}
 		if err != nil {
 			handleError(w, err, fmt.Sprintf("%s command error", cases.Title(language.Und).String(ast.StreamTypeMap[st])), logger)

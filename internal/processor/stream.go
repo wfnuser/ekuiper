@@ -160,9 +160,10 @@ func (p *StreamProcessor) execSave(stmt *ast.StreamStmt, statement string, repla
 		}
 	}
 	s, err := json.Marshal(xsql.StreamInfo{
-		StreamType: stmt.StreamType,
-		Statement:  statement,
-		StreamKind: stmt.Options.KIND,
+		StreamType:   stmt.StreamType,
+		Statement:    statement,
+		StreamKind:   stmt.Options.KIND,
+		StreamFormat: stmt.Options.FORMAT,
 	})
 	if err != nil {
 		return fmt.Errorf("error when saving to db: %v.", err)
@@ -221,6 +222,20 @@ func (p *StreamProcessor) execShow(st ast.StreamType) ([]string, error) {
 }
 
 func (p *StreamProcessor) ShowStream(st ast.StreamType) ([]string, error) {
+	infos, err := p.ShowStreamInfo(st)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []string
+	for _, info := range infos {
+		keys = append(keys, info.StreamName)
+	}
+
+	return keys, err
+}
+
+func (p *StreamProcessor) ShowStreamInfo(st ast.StreamType) ([]xsql.StreamInfo, error) {
 	stt := ast.StreamTypeMap[st]
 	keys, err := p.db.Keys()
 	if err != nil {
@@ -228,13 +243,14 @@ func (p *StreamProcessor) ShowStream(st ast.StreamType) ([]string, error) {
 	}
 	var (
 		v      string
-		vs     = &xsql.StreamInfo{}
-		result = make([]string, 0)
+		result = make([]xsql.StreamInfo, 0)
 	)
 	for _, k := range keys {
 		if ok, _ := p.db.Get(k, &v); ok {
-			if err := json.Unmarshal(cast.StringToBytes(v), vs); err == nil && vs.StreamType == st {
-				result = append(result, k)
+			vs := xsql.StreamInfo{}
+			if err := json.Unmarshal(cast.StringToBytes(v), &vs); err == nil && vs.StreamType == st {
+				vs.StreamName = k
+				result = append(result, vs)
 			}
 		}
 	}
@@ -242,8 +258,22 @@ func (p *StreamProcessor) ShowStream(st ast.StreamType) ([]string, error) {
 }
 
 func (p *StreamProcessor) ShowTable(kind string) ([]string, error) {
+	infos, err := p.ShowTableInfo(kind)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []string
+	for _, info := range infos {
+		keys = append(keys, info.StreamName)
+	}
+
+	return keys, err
+}
+
+func (p *StreamProcessor) ShowTableInfo(kind string) ([]xsql.StreamInfo, error) {
 	if kind == "" {
-		return p.ShowStream(ast.TypeTable)
+		return p.ShowStreamInfo(ast.TypeTable)
 	}
 	keys, err := p.db.Keys()
 	if err != nil {
@@ -251,16 +281,17 @@ func (p *StreamProcessor) ShowTable(kind string) ([]string, error) {
 	}
 	var (
 		v      string
-		vs     = &xsql.StreamInfo{}
-		result = make([]string, 0)
+		result = make([]xsql.StreamInfo, 0)
 	)
 	for _, k := range keys {
 		if ok, _ := p.db.Get(k, &v); ok {
-			if err := json.Unmarshal(cast.StringToBytes(v), vs); err == nil && vs.StreamType == ast.TypeTable {
+			vs := xsql.StreamInfo{}
+			vs.StreamName = k
+			if err := json.Unmarshal(cast.StringToBytes(v), &vs); err == nil && vs.StreamType == ast.TypeTable {
 				if kind == "scan" && (vs.StreamKind == ast.StreamKindScan || vs.StreamKind == "") {
-					result = append(result, k)
+					result = append(result, vs)
 				} else if kind == "lookup" && vs.StreamKind == ast.StreamKindLookup {
-					result = append(result, k)
+					result = append(result, vs)
 				}
 			}
 		}

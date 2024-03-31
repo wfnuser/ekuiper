@@ -56,9 +56,11 @@ func GetStatementFromSql(sql string) (*ast.SelectStatement, error) {
 }
 
 type StreamInfo struct {
-	StreamType ast.StreamType `json:"streamType"`
-	StreamKind string         `json:"streamKind"`
-	Statement  string         `json:"statement"`
+	StreamType   ast.StreamType `json:"streamType"`
+	StreamKind   string         `json:"streamKind"`
+	Statement    string         `json:"statement"`
+	StreamFormat string         `json:"streamFormat"`
+	StreamName   string         `json:"streamName"`
 }
 
 func GetDataSourceStatement(m kv.KeyValue, name string) (*StreamInfo, error) {
